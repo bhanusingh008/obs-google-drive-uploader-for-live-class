@@ -5,6 +5,7 @@ import os
 import logging
 import sys
 from datetime import datetime
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +13,16 @@ class GoogleDriveManager:
     SCOPES = ['https://www.googleapis.com/auth/drive.file']
     SERVICE_ACCOUNT_FILE = 'service-account.json'
     DRIVE_VIEW_URL = "https://drive.google.com/file/d/{}/view"
-    SHARED_FOLDER_ID = "1etyTblY2gBnmK5gVG4I-sIqQGwrsyw99"
-
+    
     def __init__(self):
+        # Load environment variables
+        load_dotenv()
+        
+        # Get folder ID from environment
+        self.shared_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+        if not self.shared_folder_id:
+            raise ValueError("GOOGLE_DRIVE_FOLDER_ID not found in environment variables")
+            
         self.creds = self._get_credentials()
         self.service = build('drive', 'v3', credentials=self.creds, cache_discovery=False)
 
@@ -42,11 +50,9 @@ class GoogleDriveManager:
             raise
 
     def get_or_create_folder(self, folder_name, parent_id=None):
-        """Create a subfolder in the specified parent folder."""
+        """Get or create a folder in Google Drive."""
+        parent_id = parent_id or self.shared_folder_id
         try:
-            # If no parent_id is provided, use the shared folder
-            parent_id = parent_id or self.SHARED_FOLDER_ID
-            
             query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and '{parent_id}' in parents and trashed=false"
             results = self.service.files().list(
                 q=query,
