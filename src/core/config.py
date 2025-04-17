@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from dotenv import load_dotenv
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class Config:
     def __init__(self):
         """Initialize configuration."""
         # Load environment variables
-        load_dotenv()
+        self._load_env()
         
         # Application settings
         self.app_name = "MathsByPawanSir"
@@ -49,6 +50,24 @@ class Config:
         
         # Load or create chapters configuration
         self.chapters = self._load_chapters()
+    
+    def _load_env(self):
+        """Load environment variables from the correct location."""
+        if getattr(sys, 'frozen', False):
+            # If we're running in a PyInstaller bundle
+            base_path = Path(sys._MEIPASS)
+            env_path = base_path / '.env'
+        else:
+            # If we're running in development
+            base_path = Path(__file__).parent.parent.parent
+            env_path = base_path / '.env'
+        
+        logger.info(f"Loading environment from: {env_path}")
+        if not env_path.exists():
+            logger.error(f"Environment file not found at: {env_path}")
+            raise FileNotFoundError(f"Environment file not found at: {env_path}")
+        
+        load_dotenv(env_path)
     
     def ensure_directories(self) -> None:
         """Ensure required directories exist."""
