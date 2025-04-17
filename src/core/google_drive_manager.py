@@ -6,6 +6,7 @@ import logging
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +17,33 @@ class GoogleDriveManager:
     
     def __init__(self):
         # Load environment variables
-        load_dotenv()
+        self._load_env()
         
         # Get folder ID from environment
         self.shared_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
         if not self.shared_folder_id:
-            raise ValueError("GOOGLE_DRIVE_FOLDER_ID not found in environment variables")
+            raise ValueError("GOOGLE_DRIVE_FOLDER_ID not found in environment variables. Please check your .env file.")
             
         self.creds = self._get_credentials()
         self.service = build('drive', 'v3', credentials=self.creds, cache_discovery=False)
+
+    def _load_env(self):
+        """Load environment variables from the correct location."""
+        if getattr(sys, 'frozen', False):
+            # If we're running in a PyInstaller bundle
+            base_path = Path(sys._MEIPASS)
+            env_path = base_path / '.env'
+        else:
+            # If we're running in development
+            base_path = Path(__file__).parent.parent.parent
+            env_path = base_path / '.env'
+        
+        logger.info(f"Loading environment from: {env_path}")
+        if not env_path.exists():
+            logger.error(f"Environment file not found at: {env_path}")
+            raise FileNotFoundError(f"Environment file not found at: {env_path}")
+        
+        load_dotenv(env_path)
 
     def _get_service_account_path(self):
         """Get the correct path for the service account file."""
